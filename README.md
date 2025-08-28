@@ -22,7 +22,7 @@ Supports **video download**, **audio formats** (MP3, M4A, WAV), and inline butto
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/rakumanakasu/Download_TelegramBot.git
+git clone https://github.com/rakumanakasu/TelegramBot_Download.git
 cd TelegramBot_Download
 ```
 
