@@ -81,7 +81,7 @@ python bot.py
 
 1️⃣ .env.example
 
-Create a file named .env.example in your project folder:
+file named .env.example in your project folder:
 
 # Rename this file to .env and add your real bot token
 BOT_TOKEN=your_telegram_bot_token_here
