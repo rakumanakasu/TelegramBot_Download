@@ -1,53 +1,46 @@
-import telebot
-from telebot import types
-from dotenv import load_dotenv
-import yt_dlp
-import re
 import os
+import re
+import yt_dlp
+from telebot import TeleBot, types
+from dotenv import load_dotenv
 
+# Load .env
 load_dotenv()
-
-# Get BOT_TOKEN from .env
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-if not BOT_TOKEN:
-    raise ValueError("No BOT_TOKEN found in .env file")
+if not BOT_TOKEN or ":" not in BOT_TOKEN:
+    raise ValueError("Invalid Telegram bot token in .env")
 
-# Initialize the bot
-bot = telebot.TeleBot(BOT_TOKEN)
+bot = TeleBot(BOT_TOKEN)
 
-# Ensure downloads folder exists
 if not os.path.exists('downloads'):
     os.makedirs('downloads')
 
-# URL regex pattern
 url_pattern = re.compile(r'(https?://[^\s]+)')
-
-# Temporary storage
 message_urls = {}
 
-# --- Download functions ---
+# --- Download video ---
 def download_video(url):
-    ydl_opts = {'format': 'best', 'outtmpl': 'downloads/%(title)s.%(ext)s'}
+    ydl_opts = {
+        'format': 'best[ext=mp4]/best',
+        'outtmpl': 'downloads/%(title)s.%(ext)s'
+    }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         return ydl.prepare_filename(info)
 
-def download_audio(url, audio_format='mp3'):
+# --- Download audio as OGG/Opus (no conversion needed) ---
+def download_audio_as_voice(url):
     ydl_opts = {
         'format': 'bestaudio/best',
-        'outtmpl': f'downloads/%(title)s.{audio_format}',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': audio_format,
-            'preferredquality': '192',
-        }],
+        'outtmpl': 'downloads/%(title)s.ogg',  # save as OGG for Telegram voice
+        'postprocessors': [],  # no ffmpeg needed
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
-        return f"downloads/{info['title']}.{audio_format}"
+        return ydl.prepare_filename(info)
 
-# --- Handle direct URLs ---
+# --- Handle messages ---
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     urls = url_pattern.findall(message.text)
@@ -55,25 +48,20 @@ def handle_message(message):
 
     if urls:
         message_urls[chat_id] = urls[0]
-
         keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(
-            types.InlineKeyboardButton("Download Video", callback_data="video"),
-            types.InlineKeyboardButton("Download Audio MP3", callback_data="audio_mp3"),
-            types.InlineKeyboardButton("Download Audio M4A", callback_data="audio_m4a"),
-            types.InlineKeyboardButton("Download Audio WAV", callback_data="audio_wav")
-        )
+        keyboard.add(types.InlineKeyboardButton("Download Video 🎬", callback_data="video"))
+        keyboard.add(types.InlineKeyboardButton("Download Audio 🎵", callback_data="audio"))
+        keyboard.add(types.InlineKeyboardButton("Send as Voice 🎤", callback_data="voice"))
         bot.send_message(chat_id, "Choose download type:", reply_markup=keyboard)
     else:
-        bot.send_message(chat_id, "No valid URL found. Please send a valid YouTube link.")
+        bot.send_message(chat_id, "No valid YouTube URL found. Please send a valid link.")
 
-# --- Handle inline button presses ---
+# --- Handle button clicks ---
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
     chat_id = call.message.chat.id
     data = call.data
 
-    # Get URL from stored messages
     if chat_id in message_urls:
         url = message_urls[chat_id]
         del message_urls[chat_id]
@@ -84,18 +72,27 @@ def callback_query(call):
     bot.answer_callback_query(call.id, "Downloading...")
 
     try:
-        if data.startswith("video"):
+        if data == "video":
             file_path = download_video(url)
             with open(file_path, 'rb') as f:
                 bot.send_video(chat_id, f)
-        elif data.startswith("audio"):
-            fmt = data.split("_")[1]  # mp3, m4a, wav
-            file_path = download_audio(url, audio_format=fmt)
+            os.remove(file_path)
+
+        elif data == "audio":
+            file_path = download_video(url)  # just send video as audio (no ffmpeg)
             with open(file_path, 'rb') as f:
                 bot.send_audio(chat_id, f)
-        os.remove(file_path)
+            os.remove(file_path)
+
+        elif data == "voice":
+            file_path = download_audio_as_voice(url)
+            with open(file_path, 'rb') as f:
+                bot.send_voice(chat_id, f)
+            os.remove(file_path)
+
     except Exception as e:
         bot.send_message(chat_id, f"Error: {e}")
 
-print("Bot is running...")
+# --- Run bot ---
+print("🤖 Bot is running...")
 bot.polling()
