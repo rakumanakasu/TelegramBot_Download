@@ -3,14 +3,14 @@
 # Telegram Bot Download
 
 A simple **Telegram bot** that allows users to download videos and audio from YouTube links.
-Supports **video download**, **audio formats** (MP3, M4A, WAV), and inline buttons.
+Supports **video download**, **audio formats, and inline buttons.
 
 ---
 
 ## Features
 
 * Download videos from YouTube links.
-* Download audio in multiple formats (MP3, M4A, WAV).
+* Download audio .
 * Inline buttons for easy selection of download type.
 * Safe usage of **.env** to store your bot token.
 * Temporary file cleanup after sending to keep storage light.
