@@ -29,12 +29,12 @@ def download_video(url):
         info = ydl.extract_info(url, download=True)
         return ydl.prepare_filename(info)
 
-# --- Download audio as OGG/Opus (no conversion needed) ---
+
 def download_audio_as_voice(url):
     ydl_opts = {
         'format': 'bestaudio/best',
-        'outtmpl': 'downloads/%(title)s.ogg',  # save as OGG for Telegram voice
-        'postprocessors': [],  # no ffmpeg needed
+        'outtmpl': 'downloads/%(title)s.ogg',
+        'postprocessors': [],
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
@@ -79,7 +79,7 @@ def callback_query(call):
             os.remove(file_path)
 
         elif data == "audio":
-            file_path = download_video(url)  # just send video as audio (no ffmpeg)
+            file_path = download_video(url)
             with open(file_path, 'rb') as f:
                 bot.send_audio(chat_id, f)
             os.remove(file_path)
@@ -93,6 +93,6 @@ def callback_query(call):
     except Exception as e:
         bot.send_message(chat_id, f"Error: {e}")
 
-# --- Run bot ---
-print("🤖 Bot is running...")
+
+print("Bot is running...")
 bot.polling()
